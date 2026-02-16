@@ -20,12 +20,55 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
 
+        // Build participants list HTML
+        let participantsHTML = '';
+        if (details.participants.length > 0) {
+          participantsHTML = `
+            <div class="participants-section">
+              <strong>Signed Up:</strong>
+              <ul class="participants-list">
+                ${details.participants.map(participant => `<li><span class="participant-email">${participant}</span><button class="delete-participant" data-activity="${name}" data-email="${participant}" title="Remove participant">×</button></li>`).join('')}
+              </ul>
+            </div>
+          `;
+        } else {
+          participantsHTML = '<p class="no-participants">No participants yet</p>';
+        }
+
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          ${participantsHTML}
         `;
+
+        // Add event listeners for delete buttons
+        activityCard.querySelectorAll('.delete-participant').forEach(button => {
+          button.addEventListener('click', async (event) => {
+            event.preventDefault();
+            const activity = button.getAttribute('data-activity');
+            const email = button.getAttribute('data-email');
+            
+            try {
+              const response = await fetch(
+                `/activities/${encodeURIComponent(activity)}/unregister?email=${encodeURIComponent(email)}`,
+                { method: 'POST' }
+              );
+              
+              if (response.ok) {
+                // Refresh the activities list
+                fetchActivities();
+              } else {
+                const result = await response.json();
+                alert(result.detail || 'Failed to remove participant');
+              }
+            } catch (error) {
+              console.error('Error removing participant:', error);
+              alert('Failed to remove participant');
+            }
+          });
+        });
 
         activitiesList.appendChild(activityCard);
 
